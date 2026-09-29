@@ -119,8 +119,21 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 1. 서류 업로드 및 AI 분석
-st.subheader("1. 베이플랜(Bay Plan) 스캔")
-uploaded_file = st.file_uploader("현장 도면 이미지를 업로드하세요", type=["jpg", "jpeg", "png", "jfif"])
+# 1. 서류 업로드 및 AI 분석 (카메라 라이브 촬영 + 앨범 업로드)
+st.subheader("1. 베이플랜 (Bay Plan) / 씰 스캔")
+tab1, tab2 = st.tabs(["📷 현장 라이브 촬영", "📁 앨범에서 업로드"])
+
+uploaded_file = None
+
+with tab1:
+    camera_file = st.camera_input("카메라로 씰/도면을 촬영하세요")
+    if camera_file:
+        uploaded_file = camera_file
+
+with tab2:
+    file_input = st.file_uploader("현장 도면 이미지를 업로드하세요", type=["jpg", "jpeg", "png", "jfif"])
+    if file_input and not uploaded_file:
+        uploaded_file = file_input
 
 if uploaded_file is not None:
     st.image(uploaded_file, caption="원본 베이플랜 이미지", use_container_width=True)
