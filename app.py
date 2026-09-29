@@ -78,12 +78,9 @@ st.markdown("""
 # app.py 상단 코드 수정 (기존 RAW_API_KEY 변수 교체)
 
 # Streamlit Secrets 또는 환경 변수에서 안전하게 키 로드
-if "OPENAI_API_KEY" in st.secrets:
-    RAW_API_KEY = st.secrets["OPENAI_API_KEY"]
-else:
-    RAW_API_KEY = os.getenv("OPENAI_API_KEY", "")
-
-DEFAULT_KEY = "".join(c for c in RAW_API_KEY if ord(c) < 128).strip()
+# Secrets에서 키를 직접 읽어와 공백만 제거
+RAW_API_KEY = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY", ""))
+DEFAULT_KEY = str(RAW_API_KEY).strip().strip('"').strip("'")
 
 # 📱 사이드바 구성
 with st.sidebar:
@@ -140,7 +137,7 @@ if uploaded_file is not None:
                     # 파일 mime type 감지
                     file_type = uploaded_file.type if uploaded_file.type else "image/jpeg"
 
-                    client = OpenAI(api_key=api_key)
+                    client = OpenAI(api_key=DEFAULT_KEY)
 
                     prompt = """
                     You are an expert AI inspecting port Bay Plan documents. Analyze the provided image carefully and return a JSON object.
