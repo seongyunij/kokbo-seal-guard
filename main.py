@@ -5,7 +5,7 @@ import pandas as pd
 from openai import OpenAI
 
 # 1. API 클라이언트 설정
-OPENAI_API_KEY = "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"  # <-- 본인 API 키 입력
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def encode_image(image_path):
