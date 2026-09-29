@@ -88,9 +88,7 @@ DEFAULT_KEY = "".join(c for c in RAW_API_KEY if ord(c) < 128).strip()
 # 📱 사이드바 구성
 with st.sidebar:
     st.header("⚙️ 시스템 설정")
-    input_key = st.text_input("OpenAI API Key", value=DEFAULT_KEY, type="password")
-    api_key = "".join(c for c in input_key if ord(c) < 128).strip()
-    
+    api_key = DEFAULT_KEY
     if api_key:
         st.success("🔑 API 키 인증 완료")
 
