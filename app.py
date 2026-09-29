@@ -11,6 +11,20 @@ from dotenv import load_dotenv
 # .env 파일 로드
 load_dotenv()
 
+import os
+from supabase import create_client, Client
+
+# Supabase DB 초기화
+SUPABASE_URL = os.getenv("SUPABASE_URL") or st.secrets.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or st.secrets.get("SUPABASE_KEY", "")
+
+supabase_client: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        st.warning(f"DB 연결 설정 오류: {e}")
+
 st.set_page_config(
     page_title="국보기업 KOKBO Seal-Guard",
     page_icon="🚢",
@@ -306,10 +320,25 @@ if 'parsed_data' in st.session_state:
         )
 
         # 2. 검수 데이터 최종 승인 & 피드백 저장 버튼
-        if st.button("✅ 검수 데이터 최종 승인 & 피드백 저장", type="primary", use_container_width=True):
-            st.session_state["is_approved"] = True
-            st.success("🎉 검수 데이터가 최종 승인되었습니다!")
-
+    if st.button("✅ 검수 데이터 최종 승인 & 피드백 저장", type="primary", use_container_width=True):
+        st.session_state["is_approved"] = True
+        
+       # Supabase 클라우드 DB에 검수 내역 영구 저장
+    if supabase_client:
+        try:
+            log_data = {
+                "vessel": vessel,
+                "voy_no": voy_no,
+                "total_containers": len(edited_df),
+                "is_approved": True,
+                "details_json": edited_df.to_dict(orient="records")
+            }
+            supabase_client.table("inspection_logs").insert(log_data).execute()
+            st.success("🎉 검수 데이터가 최종 승인되었으며 클라우드 DB에 성공적으로 저장되었습니다!")
+        except Exception as e:
+            st.success(f"🎉 검수 데이터가 최종 승인되었습니다! (단, DB 저장 오류: {e})")
+    else:
+        st.success("🎉 검수 데이터가 최종 승인되었습니다!")
         # 3. 승인이 완료된 경우에만 최종 엑셀 파일 다운로드 제공
         if st.session_state.get("is_approved", False):
             buffer = io.BytesIO()
@@ -369,3 +398,21 @@ if 'parsed_data' in st.session_state:
             st.caption("위 컨테이너는 국보기업 AI 현장 검수 솔루션을 통해 세관 씰 점검이 정상 완료되었음을 증명합니다.")
         with col_rep2:
             st.markdown("**검수 담당자:** 국보기업 현장 검수팀 (인)")
+# 맨 왼쪽 끝에 맞춰져야 함!
+st.markdown("---")
+st.subheader("📜 과거 검수 이력 (Cloud DB)")
+
+if supabase_client:
+    try:
+        res = supabase_client.table("inspection_logs").select("*").order("created_at", desc=True).limit(20).execute()
+        logs = res.data
+        if logs:
+            log_df = pd.DataFrame(logs)
+            st.dataframe(
+                log_df[["created_at", "vessel", "voy_no", "total_containers", "is_approved"]],
+                use_container_width=True
+            )
+        else:
+            st.info("아직 클라우드 DB에 저장된 과거 검수 이력이 없습니다.")
+    except Exception as e:
+        st.caption("과거 이력 데이터를 불러오는 중입니다...")
