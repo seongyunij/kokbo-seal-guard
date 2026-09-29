@@ -118,7 +118,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 1. 서류 업로드 및 AI 분석
+
 # 1. 서류 업로드 및 AI 분석 (카메라 라이브 촬영 + 앨범 업로드)
 st.subheader("1. 베이플랜 (Bay Plan) / 씰 스캔")
 tab1, tab2 = st.tabs(["📷 현장 라이브 촬영", "📁 앨범에서 업로드"])
@@ -296,19 +296,33 @@ if 'parsed_data' in st.session_state:
             })
 
         df = pd.DataFrame(table_rows)
-        st.dataframe(df, use_container_width=True)
-
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='국보기업_검수데이터')
-
-        st.download_button(
-            label="📥 정제 엑셀 파일 다운로드 (.xlsx)",
-            data=buffer.getvalue(),
-            file_name=f"KOKBO_BayPlan_{vessel}_{voy_no}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
+        # 1. 사용자가 직접 오타나 잘못 인식된 셀을 터치해서 수정할 수 있는 에디터
+        st.caption("💡 AI 오인식 항목은 표의 셀을 직접 터치해 수정하세요. 수정 내용은 승인 시 데이터에 즉시 반영됩니다.")
+        edited_df = st.data_editor(
+            df,
+            num_rows="dynamic",
+            use_container_width=True,
+            key="editor_grid"
         )
+
+        # 2. 검수 데이터 최종 승인 & 피드백 저장 버튼
+        if st.button("✅ 검수 데이터 최종 승인 & 피드백 저장", type="primary", use_container_width=True):
+            st.session_state["is_approved"] = True
+            st.success("🎉 검수 데이터가 최종 승인되었습니다!")
+
+        # 3. 승인이 완료된 경우에만 최종 엑셀 파일 다운로드 제공
+        if st.session_state.get("is_approved", False):
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                edited_df.to_excel(writer, index=False, sheet_name='국보기업_검수데이터')
+
+            st.download_button(
+                label="📥 승인된 최종 검수 보고서 (.xlsx) 다운로드",
+                data=buffer.getvalue(),
+                file_name=f"KOKBO_BayPlan_{vessel}_{voy_no}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
 
     with tab3:
         st.markdown("### 📄 컨테이너 세관 씰(Seal) 검수 완료 보고서")
